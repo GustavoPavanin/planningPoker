@@ -5,6 +5,6 @@ import lombok.Setter;
 
 @Getter
 @Setter
-public class Colaborate {
+public class Vote {
     private Double vote;
 }

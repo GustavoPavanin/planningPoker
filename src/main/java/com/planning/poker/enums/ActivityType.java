@@ -3,7 +3,7 @@ package com.planning.poker.enums;
 public enum ActivityType {
     CONNECT,
     DISCONNECT,
-    MESSAGE,
+    VOTE,
     ERROR,
     CUSTOM
 }
