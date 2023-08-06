@@ -9,9 +9,7 @@ import java.util.Optional;
 
 @Data
 public class Content {
-    private List<User> users = new ArrayList<>();
     private List<Room> rooms = new ArrayList<>();
-    private Double value;
 
     public Room getRoomById(Integer id){
         Optional<Room> optionalRoom = rooms.stream().filter(room -> room.getId().equals(id)).findFirst();
