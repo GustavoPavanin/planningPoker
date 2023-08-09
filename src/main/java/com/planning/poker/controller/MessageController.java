@@ -2,9 +2,9 @@ package com.planning.poker.controller;
 
 import com.planning.poker.enums.ActivityType;
 import com.planning.poker.model.*;
+import com.planning.poker.util.Utils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.event.EventListener;
-import org.springframework.messaging.handler.annotation.DestinationVariable;
 import org.springframework.messaging.handler.annotation.MessageMapping;
 import org.springframework.messaging.handler.annotation.Payload;
 import org.springframework.messaging.handler.annotation.SendTo;
@@ -13,8 +13,10 @@ import org.springframework.messaging.simp.SimpMessageSendingOperations;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.messaging.simp.stomp.StompHeaderAccessor;
 import org.springframework.stereotype.Controller;
-import org.springframework.web.bind.annotation.CrossOrigin;
 import org.springframework.web.socket.messaging.SessionDisconnectEvent;
+import org.springframework.web.socket.messaging.SessionUnsubscribeEvent;
+
+import static com.planning.poker.util.Utils.isNotNull;
 
 @Controller
 public class MessageController {
@@ -23,7 +25,6 @@ public class MessageController {
 
     @Autowired
     private SimpMessagingTemplate simpMessagingTemplate;
-
     @Autowired
     private SimpMessageSendingOperations message;
 
@@ -32,10 +33,12 @@ public class MessageController {
     public Room join(UserJoin userJoin, SimpMessageHeaderAccessor accessor){
         Integer roomId = userJoin.getRoomIdInteger();
         Room room = CONTENT.getRoomById(roomId);
-        User user = userJoin.getUser();
-        room.getUsers().add(user);
-        room.getActivities().add(new Activity(user, ActivityType.CONNECT));
-        accessor.getSessionAttributes().put("user", user);
+        if(isNotNull(room)){
+            User user = userJoin.getUser();
+            room.getUsers().add(user);
+            room.getActivities().add(new Activity(user, ActivityType.CONNECT));
+            accessor.getSessionAttributes().put("user", user);
+        }
         return room;
     }
 
@@ -50,15 +53,24 @@ public class MessageController {
     @MessageMapping("/getRoomInfo")
     @SendTo("/topic/response")
     public Room getRoomInfo(@Payload Integer roomId, SimpMessageHeaderAccessor accessor){
-        System.out.println(roomId);
         return CONTENT.getRoomById(roomId);
     }
 
     @EventListener
     public void socketDisconnect(SessionDisconnectEvent event){
         StompHeaderAccessor wrap = StompHeaderAccessor.wrap(event.getMessage());
-        Room room = new Room();
+        disconnectUser(wrap);
+    }
+
+    @EventListener
+    public void socketUnsubscribe(SessionUnsubscribeEvent event){
+        StompHeaderAccessor wrap = StompHeaderAccessor.wrap(event.getMessage());
+        disconnectUser(wrap);
+    }
+
+    private void disconnectUser(StompHeaderAccessor wrap) {
         if(wrap.getSessionAttributes().containsKey("user")){
+            Room room = new Room();
             User user = (User) wrap.getSessionAttributes().get("user");
             room = CONTENT.getRoomById(user.getRoomId());
             User userToRemove = null;
@@ -70,8 +82,6 @@ public class MessageController {
             }
             room.getUsers().remove(userToRemove);
             message.convertAndSend("/topic/response", room);
-            System.out.println(room);
         }
-
     }
 }
