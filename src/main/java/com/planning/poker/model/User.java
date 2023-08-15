@@ -11,4 +11,8 @@ public class User {
     private Double vote;
     private Integer roomId;
     private boolean revealCard;
+
+    public void setVote(String vote){
+        this.vote = vote.equals("?") ? null : Double.valueOf(vote);
+    }
 }

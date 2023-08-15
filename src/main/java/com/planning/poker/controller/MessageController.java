@@ -16,6 +16,8 @@ import org.springframework.stereotype.Controller;
 import org.springframework.web.socket.messaging.SessionDisconnectEvent;
 import org.springframework.web.socket.messaging.SessionUnsubscribeEvent;
 
+import java.util.Objects;
+
 import static com.planning.poker.util.Utils.isNotNull;
 
 @Controller
@@ -36,7 +38,6 @@ public class MessageController {
         if(isNotNull(room)){
             User user = userJoin.getUser();
             room.getUsers().add(user);
-            room.getActivities().add(new Activity(user, ActivityType.CONNECT));
             accessor.getSessionAttributes().put("user", user);
         }
         return room;
@@ -54,6 +55,20 @@ public class MessageController {
     @SendTo("/topic/response")
     public Room getRoomInfo(@Payload Integer roomId, SimpMessageHeaderAccessor accessor){
         return CONTENT.getRoomById(roomId);
+    }
+
+    @MessageMapping("/vote")
+    public void vote(@Payload String vote, SimpMessageHeaderAccessor accessor){
+        User user = (User) Objects.requireNonNull(accessor.getSessionAttributes()).get("user");
+        if(isNotNull(user)){
+            Room room = CONTENT.getRoomById(user.getRoomId());
+            for (User currentUser: room.getUsers()) {
+                if(currentUser.getId().equals(user.getId())){
+                    currentUser.setVote(vote);
+                }
+            }
+        }
+
     }
 
     @EventListener
@@ -77,11 +92,12 @@ public class MessageController {
             for (User currentUser: room.getUsers()) {
                 if(currentUser.getId().equals(user.getId())){
                     userToRemove = currentUser;
-                    room.getActivities().add(new Activity(user, ActivityType.DISCONNECT));
                 }
             }
             room.getUsers().remove(userToRemove);
             message.convertAndSend("/topic/response", room);
         }
     }
+
+
 }
