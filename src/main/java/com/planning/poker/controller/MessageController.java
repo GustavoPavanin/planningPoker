@@ -2,6 +2,7 @@ package com.planning.poker.controller;
 
 import com.planning.poker.enums.ActivityType;
 import com.planning.poker.model.*;
+import com.planning.poker.services.ContentService;
 import com.planning.poker.util.Utils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.event.EventListener;
@@ -29,6 +30,8 @@ public class MessageController {
     private SimpMessagingTemplate simpMessagingTemplate;
     @Autowired
     private SimpMessageSendingOperations message;
+    @Autowired
+    private ContentService contentService;
 
     @MessageMapping("/joinRoom")
     @SendTo("/topic/joinned")
@@ -45,30 +48,26 @@ public class MessageController {
 
     @MessageMapping("/createRoom")
     @SendTo("/topic/roomCreated")
-    public Room createRoom(@Payload Room room, SimpMessageHeaderAccessor accessor){
-        room.generateId(CONTENT.getRooms().size());
-        CONTENT.getRooms().add(room);
-        return room;
+    public Room createRoom(@Payload Room room){
+        return contentService.createRoom(CONTENT, room);
     }
 
     @MessageMapping("/getRoomInfo")
     @SendTo("/topic/response")
-    public Room getRoomInfo(@Payload Integer roomId, SimpMessageHeaderAccessor accessor){
-        return CONTENT.getRoomById(roomId);
+    public Room getRoomInfo(@Payload Integer roomId){
+        return contentService.getRoomInfo(CONTENT, roomId);
     }
 
     @MessageMapping("/vote")
-    public void vote(@Payload String vote, SimpMessageHeaderAccessor accessor){
-        User user = (User) Objects.requireNonNull(accessor.getSessionAttributes()).get("user");
-        if(isNotNull(user)){
-            Room room = CONTENT.getRoomById(user.getRoomId());
-            for (User currentUser: room.getUsers()) {
-                if(currentUser.getId().equals(user.getId())){
-                    currentUser.setVote(vote);
-                }
-            }
-        }
+    @SendTo("/topic/response")
+    public Room vote(@Payload String vote, SimpMessageHeaderAccessor accessor){
+        return contentService.vote(CONTENT, vote, accessor);
+    }
 
+    @MessageMapping("/revealResult")
+    @SendTo("/topic/response")
+    public Room revealResult(@Payload Integer roomId){
+        return contentService.revealResult(CONTENT, roomId);
     }
 
     @EventListener

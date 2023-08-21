@@ -3,6 +3,8 @@ package com.planning.poker.model;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 
+import static com.planning.poker.util.Utils.isNull;
+
 @Data
 @AllArgsConstructor
 public class User {
@@ -13,6 +15,15 @@ public class User {
     private boolean revealCard;
 
     public void setVote(String vote){
-        this.vote = vote.equals("?") ? null : Double.valueOf(vote);
+        vote = vote.replace("\"", "");
+        if(isNull(vote)){
+            this.vote = null;
+        } else if (vote.equals("?")) {
+            this.vote = -1d;
+        } else if(vote.equals("1/2")) {
+            this.vote = 0.5;
+        }else{
+            this.vote = Double.valueOf(vote);
+        }
     }
 }
