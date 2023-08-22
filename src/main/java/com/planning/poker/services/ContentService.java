@@ -50,14 +50,14 @@ public class ContentService {
     }
 
     private boolean isValidVote(Double vote) {
-        return  isNotNull(vote) ||vote > -1;
+        return  isNotNull(vote) && vote > -1;
     }
 
     private void resetResultAndVotes(Room room) {
         room.setResult(new Result());
         for (User user: room.getUsers()) {
             user.setVote(STRING_NULL);
-        };
+        }
     }
 
     private Double calculateMean(List<Double> votes) {
@@ -101,14 +101,15 @@ public class ContentService {
 
         for (Map.Entry<Double, Long> entry : FrequencyOfVotes.entrySet()) {
             Long value = entry.getValue();
+            if (value.equals(maxValue)) {
+                moda.add(entry);
+            }
             if (value > maxValue) {
                 moda.clear();
                 moda.add(entry);
                 maxValue = value;
             }
-            if (value.equals(maxValue)) {
-                moda.add(entry);
-            }
+
         }
         return generateStringMode(moda);
     }
