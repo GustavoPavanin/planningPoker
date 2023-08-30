@@ -2,6 +2,7 @@ package com.planning.poker.services;
 
 import com.planning.poker.model.*;
 import org.springframework.messaging.simp.SimpMessageHeaderAccessor;
+import org.springframework.messaging.simp.stomp.StompHeaderAccessor;
 import org.springframework.stereotype.Service;
 
 import java.util.*;
@@ -13,7 +14,8 @@ import static com.planning.poker.util.Utils.*;
 public class ContentService {
 
     public Room createRoom(Content content, Room room){
-        room.generateId(content.getRooms().size());
+        room.setId(content.nextId());
+        room.setResult(new Result());
         content.getRooms().add(room);
         return room;
     }
@@ -36,17 +38,65 @@ public class ContentService {
         Room room = content.getRoomById(roomId);
         List<Double> votes = new ArrayList<>();
         if(isNull(room.getResult()) || !room.getResult().hasValue()){
-            for (User user:room.getUsers()) {
-                Double vote = user.getVote();
-                if(isValidVote(vote)){
-                    votes.add(vote);
-                }
-            }
+            getValidVotes(room, votes);
             room.setResult(new Result(calculateMean(votes),calculateMedian(votes), modeStringify(votes), true));
         } else{
             resetResultAndVotes(room);
         }
         return room;
+    }
+
+    private void getValidVotes(Room room, List<Double> votes) {
+        for (User user: room.getUsers()) {
+            Double vote = user.getVote();
+            if(isValidVote(vote)){
+                votes.add(vote);
+            }
+        }
+    }
+
+    public Room joinRoom(Content content, UserJoin userJoin, SimpMessageHeaderAccessor accessor) {
+        Integer roomId = userJoin.getRoomIdInteger();
+        Room room = content.getRoomById(roomId);
+        if(isNotNull(room)){
+            User user = userJoin.getUser();
+            room.getUsers().add(user);
+            accessor.getSessionAttributes().put("user", user);
+        }
+        return room;
+    }
+
+    public Room disconnect(Content content,StompHeaderAccessor wrap) {
+        if(wrap.getSessionAttributes().containsKey("user")){
+            Room room;
+            User user = (User) wrap.getSessionAttributes().get("user");
+            room = content.getRoomById(user.getRoomId());
+            if(isNull(room)){
+                return null;
+            }
+            User userToRemove;
+            userToRemove = getUserToRemove(room, user);
+            room.getUsers().remove(userToRemove);
+            closeRoomIfNeeds(content, room);
+            return room;
+        }
+        return null;
+    }
+
+    private User getUserToRemove(Room room, User user) {
+        User userToRemove = null;
+        for (User currentUser: room.getUsers()) {
+            if(currentUser.getId().equals(user.getId())){
+                userToRemove = currentUser;
+            }
+        }
+        return userToRemove;
+    }
+
+    private void closeRoomIfNeeds(Content content, Room room){
+        if(room.getUsers().isEmpty()){
+            content.getRooms().remove(room);
+        }
     }
 
     private boolean isValidVote(Double vote) {
@@ -69,11 +119,16 @@ public class ContentService {
     }
 
     private Double calculateMedian(List<Double> votes) {
+
         List<Double> sortedValues = votes.stream()
                 .sorted()
                 .toList();
         int size = sortedValues.size();
         int midIndex = getMidOfSize(size);
+        return votes.size() > 0 ? calculateMedianPairOrOdd(sortedValues, size, midIndex) : 0;
+    }
+
+    private double calculateMedianPairOrOdd(List<Double> sortedValues, int size, int midIndex) {
         return size % 2 == 0 ? medianOdd(sortedValues, midIndex) : sortedValues.get(midIndex);
     }
 
@@ -101,19 +156,22 @@ public class ContentService {
 
         for (Map.Entry<Double, Long> entry : FrequencyOfVotes.entrySet()) {
             Long value = entry.getValue();
-            if (value.equals(maxValue)) {
-                moda.add(entry);
-            }
-            if (value > maxValue) {
-                moda.clear();
-                moda.add(entry);
-                maxValue = value;
-            }
+            processMode(maxValue, value, moda, entry);
 
         }
         return generateStringMode(moda);
     }
 
+    private void processMode(Long maxValue, Long value, List<Map.Entry<Double, Long>> moda, Map.Entry<Double, Long> entry){
+        if (value.equals(maxValue)) {
+            moda.add(entry);
+        }
+        if (value > maxValue) {
+            moda.clear();
+            moda.add(entry);
+            maxValue = value;
+        }
+    }
     private String generateStringMode(List<Map.Entry<Double, Long>> moda){
         String stringMode = "";
         if(moda.isEmpty() || moda.size() > 2){

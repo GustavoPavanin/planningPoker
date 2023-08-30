@@ -14,11 +14,8 @@ public class Room {
     private Integer voteSystem;
     private Result result;
     private List<User> users = new ArrayList<>();
-    public void generateId(Integer value) {
-        this.setId(value+1);
-    }
 
-    Room(String name, Integer voteSystem, Integer roomNumber){
+    Room(String name, Integer voteSystem){
          this.name = name;
          this.voteSystem = voteSystem;
          this.result = new Result();

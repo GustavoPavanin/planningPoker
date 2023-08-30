@@ -1,9 +1,7 @@
 package com.planning.poker.controller;
 
-import com.planning.poker.enums.ActivityType;
 import com.planning.poker.model.*;
 import com.planning.poker.services.ContentService;
-import com.planning.poker.util.Utils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.event.EventListener;
 import org.springframework.messaging.handler.annotation.MessageMapping;
@@ -16,8 +14,6 @@ import org.springframework.messaging.simp.stomp.StompHeaderAccessor;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.socket.messaging.SessionDisconnectEvent;
 import org.springframework.web.socket.messaging.SessionUnsubscribeEvent;
-
-import java.util.Objects;
 
 import static com.planning.poker.util.Utils.isNotNull;
 
@@ -36,14 +32,7 @@ public class MessageController {
     @MessageMapping("/joinRoom")
     @SendTo("/topic/joinned")
     public Room join(UserJoin userJoin, SimpMessageHeaderAccessor accessor){
-        Integer roomId = userJoin.getRoomIdInteger();
-        Room room = CONTENT.getRoomById(roomId);
-        if(isNotNull(room)){
-            User user = userJoin.getUser();
-            room.getUsers().add(user);
-            accessor.getSessionAttributes().put("user", user);
-        }
-        return room;
+        return contentService.joinRoom(CONTENT, userJoin, accessor);
     }
 
     @MessageMapping("/createRoom")
@@ -83,17 +72,8 @@ public class MessageController {
     }
 
     private void disconnectUser(StompHeaderAccessor wrap) {
-        if(wrap.getSessionAttributes().containsKey("user")){
-            Room room = new Room();
-            User user = (User) wrap.getSessionAttributes().get("user");
-            room = CONTENT.getRoomById(user.getRoomId());
-            User userToRemove = null;
-            for (User currentUser: room.getUsers()) {
-                if(currentUser.getId().equals(user.getId())){
-                    userToRemove = currentUser;
-                }
-            }
-            room.getUsers().remove(userToRemove);
+        Room room = contentService.disconnect(CONTENT, wrap);
+        if(isNotNull(room)){
             message.convertAndSend("/topic/response", room);
         }
     }
