@@ -121,8 +121,7 @@ public class ContentService {
     private Double calculateMedian(List<Double> votes) {
 
         List<Double> sortedValues = votes.stream()
-                .sorted()
-                .toList();
+                .sorted().collect(Collectors.toList());
         int size = sortedValues.size();
         int midIndex = getMidOfSize(size);
         return votes.size() > 0 ? calculateMedianPairOrOdd(sortedValues, size, midIndex) : 0;
