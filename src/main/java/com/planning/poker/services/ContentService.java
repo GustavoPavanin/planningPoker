@@ -1,7 +1,9 @@
 package com.planning.poker.services;
 
 import com.planning.poker.model.*;
+import com.planning.poker.model.dto.RoomDto;
 import org.springframework.messaging.simp.SimpMessageHeaderAccessor;
+import org.springframework.messaging.simp.SimpMessageSendingOperations;
 import org.springframework.messaging.simp.stomp.StompHeaderAccessor;
 import org.springframework.stereotype.Service;
 
@@ -13,10 +15,11 @@ import static com.planning.poker.util.Utils.*;
 @Service
 public class ContentService {
 
-    public Room createRoom(Content content, Room room){
+    public Room createRoom(Content content, Room room, SimpMessageSendingOperations message){
         room.setId(content.nextId());
         room.setResult(new Result());
         content.getRooms().add(room);
+        updateHall(content, message);
         return room;
     }
 
@@ -66,7 +69,7 @@ public class ContentService {
         return room;
     }
 
-    public Room disconnect(Content content,StompHeaderAccessor wrap) {
+    public Room disconnect(Content content,StompHeaderAccessor wrap, SimpMessageSendingOperations message) {
         if(wrap.getSessionAttributes().containsKey("user")){
             Room room;
             User user = (User) wrap.getSessionAttributes().get("user");
@@ -77,12 +80,15 @@ public class ContentService {
             User userToRemove;
             userToRemove = getUserToRemove(room, user);
             room.getUsers().remove(userToRemove);
-            closeRoomIfNeeds(content, room);
+            closeRoomIfNeeds(content, room, message);
             return room;
         }
         return null;
     }
 
+    public void updateHall(Content content, SimpMessageSendingOperations message){
+        message.convertAndSend("/topic/getRoomForHall", getRoomForHall(content));
+    }
     private User getUserToRemove(Room room, User user) {
         User userToRemove = null;
         for (User currentUser: room.getUsers()) {
@@ -93,9 +99,10 @@ public class ContentService {
         return userToRemove;
     }
 
-    private void closeRoomIfNeeds(Content content, Room room){
+    private void closeRoomIfNeeds(Content content, Room room, SimpMessageSendingOperations message){
         if(room.getUsers().isEmpty()){
             content.getRooms().remove(room);
+            updateHall(content, message);
         }
     }
 
@@ -184,5 +191,9 @@ public class ContentService {
             }
         }
         return stringMode;
+    }
+
+    public List<RoomDto> getRoomForHall(Content content) {
+        return content.getRooms().stream().map(RoomDto::new).collect(Collectors.toList());
     }
 }

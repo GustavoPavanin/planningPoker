@@ -1,6 +1,7 @@
 package com.planning.poker.controller;
 
 import com.planning.poker.model.*;
+import com.planning.poker.model.dto.RoomDto;
 import com.planning.poker.services.ContentService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.event.EventListener;
@@ -14,6 +15,8 @@ import org.springframework.messaging.simp.stomp.StompHeaderAccessor;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.socket.messaging.SessionDisconnectEvent;
 import org.springframework.web.socket.messaging.SessionUnsubscribeEvent;
+
+import java.util.List;
 
 import static com.planning.poker.util.Utils.isNotNull;
 
@@ -38,13 +41,19 @@ public class MessageController {
     @MessageMapping("/createRoom")
     @SendTo("/topic/roomCreated")
     public Room createRoom(@Payload Room room){
-        return contentService.createRoom(CONTENT, room);
+        return contentService.createRoom(CONTENT, room, message);
     }
 
     @MessageMapping("/getRoomInfo")
     @SendTo("/topic/response")
     public Room getRoomInfo(@Payload Integer roomId){
         return contentService.getRoomInfo(CONTENT, roomId);
+    }
+
+    @MessageMapping("/getRoomForHall")
+    @SendTo("/topic/getRoomForHall")
+    public List<RoomDto> getRoomForHall(){
+        return contentService.getRoomForHall(CONTENT);
     }
 
     @MessageMapping("/vote")
@@ -72,7 +81,7 @@ public class MessageController {
     }
 
     private void disconnectUser(StompHeaderAccessor wrap) {
-        Room room = contentService.disconnect(CONTENT, wrap);
+        Room room = contentService.disconnect(CONTENT, wrap, message);
         if(isNotNull(room)){
             message.convertAndSend("/topic/response", room);
         }
