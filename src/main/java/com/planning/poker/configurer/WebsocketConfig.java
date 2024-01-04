@@ -28,9 +28,4 @@ public class WebsocketConfig implements WebSocketMessageBrokerConfigurer {
         registry.setUserDestinationPrefix("/user");
     }
 
-    @Bean
-    public Content contentBean() {
-        return new Content();
-    }
-
 }

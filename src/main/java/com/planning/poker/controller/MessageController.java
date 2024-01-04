@@ -84,6 +84,8 @@ public class MessageController {
         Room room = contentService.disconnect(CONTENT, wrap, message);
         if(isNotNull(room)){
             message.convertAndSend("/topic/response", room);
+            message.convertAndSend("/topic/getRoomForHall",
+                    contentService.getRoomForHall(CONTENT));
         }
     }
 
