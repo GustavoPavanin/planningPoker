@@ -13,6 +13,7 @@ public class User {
     private Double vote;
     private Integer roomId;
     private boolean revealCard;
+    private boolean owner;
 
     public void setVote(String vote){
         vote = vote.replace("\"", "");
@@ -25,5 +26,9 @@ public class User {
         }else{
             this.vote = Double.valueOf(vote);
         }
+    }
+
+    public void setOwner() {
+        this.owner = true;
     }
 }

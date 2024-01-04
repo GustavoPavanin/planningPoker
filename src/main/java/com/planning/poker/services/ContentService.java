@@ -63,6 +63,9 @@ public class ContentService {
         Room room = content.getRoomById(roomId);
         if(isNotNull(room)){
             User user = userJoin.getUser();
+            if(room.isEmpty()){
+                user.setOwner();
+            }
             room.getUsers().add(user);
             accessor.getSessionAttributes().put("user", user);
         }
@@ -71,15 +74,15 @@ public class ContentService {
 
     public Room disconnect(Content content,StompHeaderAccessor wrap, SimpMessageSendingOperations message) {
         if(wrap.getSessionAttributes().containsKey("user")){
-            Room room;
             User user = (User) wrap.getSessionAttributes().get("user");
-            room = content.getRoomById(user.getRoomId());
+            Room room = content.getRoomById(user.getRoomId());
             if(isNull(room)){
                 return null;
             }
             User userToRemove;
             userToRemove = getUserToRemove(room, user);
             room.getUsers().remove(userToRemove);
+            room.verifyOwner();
             closeRoomIfNeeds(content, room, message);
             return room;
         }
@@ -183,12 +186,17 @@ public class ContentService {
         if(moda.isEmpty() || moda.size() > 2){
             stringMode = "N/A";
         }else{
-            for (Map.Entry<Double, Long> entry : moda) {
-                if(!stringMode.equals("")){
-                    stringMode = stringMode.concat(" e ");
-                }
-                stringMode = stringMode.concat(String.valueOf(entry.getKey()));
+            stringMode = generateStringModes(moda, stringMode);
+        }
+        return stringMode;
+    }
+
+    private static String generateStringModes(List<Map.Entry<Double, Long>> moda, String stringMode) {
+        for (Map.Entry<Double, Long> entry : moda) {
+            if(!stringMode.equals("")){
+                stringMode = stringMode.concat(" e ");
             }
+            stringMode = stringMode.concat(String.valueOf(entry.getKey()));
         }
         return stringMode;
     }

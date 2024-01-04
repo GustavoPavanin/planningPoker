@@ -2,10 +2,9 @@ package com.planning.poker.model;
 
 import lombok.Data;
 
-import java.util.UUID;
-
 @Data
 public class UserJoin {
+    private String id;
     private String nickName;
     private String roomId;
 
@@ -14,7 +13,7 @@ public class UserJoin {
     }
 
     public User getUser(){
-        return new User(UUID.randomUUID().toString(),nickName,null,getRoomIdInteger( ),false);
+        return new User(id,nickName,null,getRoomIdInteger( ),false, false);
     }
 }
 

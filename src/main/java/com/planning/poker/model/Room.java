@@ -20,5 +20,15 @@ public class Room {
          this.voteSystem = voteSystem;
          this.result = new Result();
     }
+
+    public boolean isEmpty(){
+        return users.isEmpty();
+    }
+
+    public void verifyOwner(){
+        if(!isEmpty() && users.stream().noneMatch(User::isOwner)){
+            users.get(0).setOwner();
+        }
+    }
 }
 
